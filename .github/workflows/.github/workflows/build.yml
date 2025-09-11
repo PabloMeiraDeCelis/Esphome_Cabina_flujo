@@ -1,3 +1,5 @@
+name: Build ESPHome firmware
+
 on:
   push:
     branches:
