@@ -234,6 +234,6 @@ display:
       it.printf(0, 36, id(font1), "Recirc. %.0f rpm",
                 id(RPM_aire_recir_1).state, id(RPM_aire_recir_1).state);
       //it.printf(0, 54, id(font1), "Recirc. %.0f rpm",
-                id(RPM_aire_recir_2).state, id(RPM_aire_recir_2).state);
+                //id(RPM_aire_recir_2).state, id(RPM_aire_recir_2).state);
              
              
