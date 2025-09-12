@@ -19,6 +19,7 @@ esphome:
           value: 40   # <--- valor inicial que quieras
 
 
+
 esp32:
   board: esp32dev
   framework:
