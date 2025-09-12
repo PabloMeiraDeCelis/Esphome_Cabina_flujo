@@ -2,7 +2,23 @@ esphome:
   name: cabina_flujo_laminar
   friendly_name: Cabina_flujo_laminar
 
- 
+  on_boot:
+    priority: 600  # suficiente para que el número ya esté creado
+    then:
+      - number.set:
+          id: base_fan1
+          value: 11   # <--- valor inicial que quieras
+      - number.set:
+          id: base_fan2
+          value: 7   # <--- valor inicial que quieras
+      - number.set:
+          id: work_fan1
+          value: 50   # <--- valor inicial que quieras          
+      - number.set:
+          id: work_fan2
+          value: 40   # <--- valor inicial que quieras
+
+
 esp32:
   board: esp32dev
   framework:
@@ -48,6 +64,36 @@ web_server:
   local: true
 
 
+#---------------------------------------------------------------------------------------------------------------------------------------
+i2c:
+  sda: 21
+  scl: 22
+  scan: true
+
+
+# --- Salidas PWM ---
+output:
+  - platform: ledc
+    pin: 16
+    id: pwm_fan1
+    frequency: 25000 Hz
+  - platform: ledc
+    pin: 17
+    id: pwm_fan2
+    frequency: 25000 Hz
+
+# --- Ventiladores definidos a partir de las salidas ---
+fan:
+  - platform: speed
+    output: pwm_fan1
+    id: fan_aire_nuevo
+    name: "Ventilador Aire Nuevo"
+    restore_mode: ALWAYS_ON   # o RESTORE_DEFAULT_OFF
+  - platform: speed
+    output: pwm_fan2
+    id: fan_recirculacion
+    name: "Ventilador Recirculación"
+    restore_mode: ALWAYS_ON   # o RESTORE_DEFAULT_OFF
 
 
 sensor:
@@ -62,4 +108,134 @@ sensor:
     filters:
       - multiply: 0.60  # Si 2 pulsos por vuelta, 1s → 30 = RPM aproximado
 
-    
+  - platform: pulse_counter
+    pin: 19
+    name: "RPM Fan Aire recir 1"
+    id: RPM_aire_recir_1
+    unit_of_measurement: "RPM"
+    update_interval: 1s
+    filters:
+      - multiply: 0.60  # Si 2 pulsos por vuelta, 1s → 30 = RPM aproximado
+
+  - platform: pulse_counter
+    pin: 5
+    name: "RPM Fan Aire recir 2"
+    id: RPM_aire_recir_2
+    unit_of_measurement: "RPM"
+    update_interval: 1s
+    filters:
+      - multiply: 0.60  # Si 2 pulsos por vuelta, 1s → 30 = RPM aproximado
+
+
+# --- Botón de modo ---
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: 23
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Botón Modo Ventiladores"
+    on_press:
+      then:
+        - lambda: |-
+            id(modo_trabajo) = !id(modo_trabajo);
+
+
+number:
+  - platform: template
+    name: "Velocidad Base Fan Aire Nuevo"
+    id: base_fan1
+    min_value: 0
+    max_value: 100
+    step: 1
+    unit_of_measurement: "PWM"
+    optimistic: true
+
+  - platform: template
+    name: "Velocidad Base Fan Recirculación"
+    id: base_fan2
+    min_value: 0
+    max_value: 100
+    step: 1
+    unit_of_measurement: "PWM"
+    optimistic: true
+
+  - platform: template
+    name: "Velocidad Trabajo Fan Aire Nuevo"
+    id: work_fan1
+    min_value: 0
+    max_value: 100
+    step: 1
+    unit_of_measurement: "PWM"
+    optimistic: true
+
+  - platform: template
+    name: "Velocidad Trabajo Fan Recirculación"
+    id: work_fan2
+    min_value: 0
+    max_value: 100
+    step: 1
+    unit_of_measurement: "PWM"
+    optimistic: true
+
+
+# --- Variable global ---
+globals:
+  - id: modo_trabajo
+    type: bool
+    restore_value: no
+    initial_value: "false"
+
+
+# --- Control principal ---
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(modo_trabajo)) {
+            // En modo trabajo -> potenciómetros
+            auto call1 = id(fan_aire_nuevo).make_call();
+            call1.set_speed(id(work_fan1).state);            //                       call1.set_speed(80);  // 80 %         antes call1.set_speed(id(pot1).state);
+            call1.perform();
+
+            auto call2 = id(fan_recirculacion).make_call();
+            call2.set_speed(id(work_fan2).state);             //                      80 %         antes call2.set_speed(id(pot2).state);
+            call2.perform();
+          } else {
+            // En modo base -> velocidades fijas
+            auto call1 = id(fan_aire_nuevo).make_call();
+            call1.set_speed(id(base_fan1).state);             //                      call1.set_speed(40);  // 40 %
+            call1.perform();
+
+            auto call2 = id(fan_recirculacion).make_call();
+            call2.set_speed(id(base_fan2).state);             //                      40 %
+            call2.perform();
+          }
+
+
+
+
+#________________________________DISPLAY______________________________________________________________________
+
+font:
+  - file: "gfonts://Roboto"
+    id: font1
+    size: 16
+
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    id: oled
+    lambda: |-
+      // Línea 1: modo
+      it.printf(0, 0, id(font1), "Modo: %s", id(modo_trabajo) ? "Trabajo" : "Base");
+
+      // Línea 2-4: ventiladores
+      it.printf(0, 18, id(font1), "Nuevo   %.0f rpm",
+                id(RPM_aire_nuevo).state);
+      it.printf(0, 36, id(font1), "Recirc. %.0f rpm",
+                id(RPM_aire_recir_1).state, id(RPM_aire_recir_1).state);
+      //it.printf(0, 54, id(font1), "Recirc. %.0f rpm",
+                id(RPM_aire_recir_2).state, id(RPM_aire_recir_2).state);
