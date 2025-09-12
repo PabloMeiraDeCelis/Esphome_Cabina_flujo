@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install ESPHome
-        run: pip install esphome
+        run: pip install esphome==2025.5.2
 
       - name: Compile all yaml configs
         run: |
