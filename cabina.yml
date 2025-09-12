@@ -41,9 +41,6 @@ ota:
 
 wifi:
   networks:
-    - ssid: Alejandria_rpt_2.4GHz
-      password: Qwertyuiop0987654321
-      priority: 10   # Más prioridad
     - ssid: Mini_Alejandria
       password: Qwert54321
       priority: 5    # Menos prioridad
