@@ -1,0 +1,24 @@
+name: Build ESPHome firmware
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Compile ESPHome firmware
+        uses: esphome/build-action@v1
+        with:
+          yaml_file: cabina.yaml
+
+      - name: Upload firmware files
+        uses: actions/upload-artifact@v3
+        with:
+          name: firmware
+          path: .esphome/build/*/*.bin
