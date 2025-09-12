@@ -19,7 +19,6 @@ esphome:
           value: 40   # <--- valor inicial que quieras
 
 
-
 esp32:
   board: esp32dev
   framework:
@@ -236,3 +235,4 @@ display:
                 id(RPM_aire_recir_1).state, id(RPM_aire_recir_1).state);
       //it.printf(0, 54, id(font1), "Recirc. %.0f rpm",
                 id(RPM_aire_recir_2).state, id(RPM_aire_recir_2).state);
+
